@@ -9,10 +9,10 @@ class NormalizeCodeTests(unittest.TestCase):
 
     def test_accepts_three_and_four_digits(self) -> None:
         self.assertEqual(normalize_code("C949"), "C949")
-        self.assertEqual(normalize_code("C1928"), "C1928")
+        self.assertEqual(normalize_code("C3057"), "C3057")
 
     def test_rejects_malformed_codes(self) -> None:
-        for raw in ("", "949", "CC949", "C94", "C19285", "C-949"):
+        for raw in ("", "949", "CC949", "C94", "C30578", "C-949"):
             with self.subTest(raw=raw), self.assertRaises(InvalidCourseCode):
                 normalize_code(raw)
 
