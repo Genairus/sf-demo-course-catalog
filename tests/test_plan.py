@@ -6,6 +6,79 @@ from tests.fixtures import sample_catalog
 
 
 class ValidatePlanTests(unittest.TestCase):
+    # Required tests from acceptance criteria
+    def test_valid_plan_returns_empty_list(self) -> None:
+        """AC-5: A multi-term plan with proper prerequisite ordering returns []"""
+        catalog = sample_catalog()
+        plan = [
+            ["C949", "D335", "D197"],  # Term 1: courses with no prerequisites
+            ["C950", "D333"],  # Term 2: C950 requires C949 (satisfied)
+            ["D287"],  # Term 3: D287 requires D335 and D197 (both satisfied)
+        ]
+        errors = validate_plan(plan, catalog)
+        self.assertEqual(errors, [])
+
+    def test_course_before_prerequisite(self) -> None:
+        """AC-2: Course scheduled in earlier term than prerequisite is reported"""
+        catalog = sample_catalog()
+        # C950 requires C949, but C949 comes later in term 2
+        errors = validate_plan([["C950"], ["C949"]], catalog)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("C950", errors[0])
+        self.assertIn("C949", errors[0])
+        self.assertIn("term 1", errors[0])
+        self.assertIn("term 2", errors[0])
+
+    def test_course_same_term_as_prerequisite(self) -> None:
+        """AC-2: Course and prerequisite in same term is reported"""
+        catalog = sample_catalog()
+        # C950 requires C949, but both are in term 1
+        errors = validate_plan([["C949", "C950"]], catalog)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("C950", errors[0])
+        self.assertIn("C949", errors[0])
+        self.assertIn("term 1", errors[0])
+        self.assertIn("also appears in term 1", errors[0])
+
+    def test_prerequisite_missing_from_plan(self) -> None:
+        """AC-2: Prerequisite not appearing anywhere in plan is reported"""
+        catalog = sample_catalog()
+        # C950 requires C949, but C949 is not in the plan
+        errors = validate_plan([["C950"]], catalog)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("C950", errors[0])
+        self.assertIn("C949", errors[0])
+        self.assertIn("not in the plan", errors[0])
+
+    def test_unknown_course_code(self) -> None:
+        """AC-3: Unknown course code is reported"""
+        catalog = sample_catalog()
+        errors = validate_plan([["Z999"]], catalog)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Unknown course code", errors[0])
+        self.assertIn("Z999", errors[0])
+
+    def test_malformed_course_code(self) -> None:
+        """AC-1: Malformed course code is reported"""
+        catalog = sample_catalog()
+        errors = validate_plan([["not-a-code"]], catalog)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Malformed course code", errors[0])
+        self.assertIn("not-a-code", errors[0])
+
+    def test_multiple_violations(self) -> None:
+        """AC-5: Plan with multiple error types reports all of them"""
+        catalog = sample_catalog()
+        # Multiple issues: unknown code, malformed code, missing prerequisite
+        errors = validate_plan([["Z999", "not-a-code", "C950"]], catalog)
+        self.assertEqual(len(errors), 3)
+        # Verify all error types are present
+        all_errors = " ".join(errors)
+        self.assertIn("Unknown course code", all_errors)
+        self.assertIn("Malformed course code", all_errors)
+        self.assertIn("not in the plan", all_errors)
+
+    # Additional comprehensive tests
     def test_empty_plan_is_valid(self) -> None:
         catalog = sample_catalog()
         errors = validate_plan([], catalog)
@@ -33,49 +106,6 @@ class ValidatePlanTests(unittest.TestCase):
         errors = validate_plan([["D335", "D197"], ["D287"]], catalog)
         self.assertEqual(errors, [])
 
-    def test_malformed_course_code(self) -> None:
-        catalog = sample_catalog()
-        errors = validate_plan([["not-a-code"]], catalog)
-        self.assertEqual(len(errors), 1)
-        self.assertIn("Malformed course code", errors[0])
-        self.assertIn("not-a-code", errors[0])
-
-    def test_unknown_course_code(self) -> None:
-        catalog = sample_catalog()
-        errors = validate_plan([["Z999"]], catalog)
-        self.assertEqual(len(errors), 1)
-        self.assertIn("Unknown course code", errors[0])
-        self.assertIn("Z999", errors[0])
-
-    def test_prerequisite_in_same_term(self) -> None:
-        catalog = sample_catalog()
-        # C950 requires C949, but both are in term 1
-        errors = validate_plan([["C949", "C950"]], catalog)
-        self.assertEqual(len(errors), 1)
-        self.assertIn("C950", errors[0])
-        self.assertIn("C949", errors[0])
-        self.assertIn("term 1", errors[0])
-        self.assertIn("also appears in term 1", errors[0])
-
-    def test_prerequisite_appears_later(self) -> None:
-        catalog = sample_catalog()
-        # C950 requires C949, but C949 comes later
-        errors = validate_plan([["C950"], ["C949"]], catalog)
-        self.assertEqual(len(errors), 1)
-        self.assertIn("C950", errors[0])
-        self.assertIn("C949", errors[0])
-        self.assertIn("term 1", errors[0])
-        self.assertIn("term 2", errors[0])
-
-    def test_prerequisite_missing_from_plan(self) -> None:
-        catalog = sample_catalog()
-        # C950 requires C949, but C949 is not in the plan
-        errors = validate_plan([["C950"]], catalog)
-        self.assertEqual(len(errors), 1)
-        self.assertIn("C950", errors[0])
-        self.assertIn("C949", errors[0])
-        self.assertIn("not in the plan", errors[0])
-
     def test_multiple_missing_prerequisites(self) -> None:
         catalog = sample_catalog()
         # D287 requires D335 and D197, but neither is in the plan
@@ -85,12 +115,6 @@ class ValidatePlanTests(unittest.TestCase):
         all_errors = " ".join(errors)
         self.assertIn("D335", all_errors)
         self.assertIn("D197", all_errors)
-
-    def test_multiple_errors_in_plan(self) -> None:
-        catalog = sample_catalog()
-        # Multiple issues: unknown code, malformed code, missing prerequisite
-        errors = validate_plan([["Z999", "not-a-code", "C950"]], catalog)
-        self.assertEqual(len(errors), 3)
 
     def test_case_insensitive_course_codes(self) -> None:
         catalog = sample_catalog()
