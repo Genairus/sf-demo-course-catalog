@@ -144,5 +144,71 @@ class CheckTermLoadsTests(unittest.TestCase):
         self.assertIn("limit 12 CU", errors[0])
 
 
+class TestCheckTermLoads(unittest.TestCase):
+    """Test cases for check_term_loads per AC-4."""
+
+    def test_term_under_limit(self) -> None:
+        """Single term with total < max_units returns []."""
+        catalog = sample_catalog()
+        # C949=4 CU, D197=1 CU → total 5 CU, limit 12
+        errors = check_term_loads([["C949", "D197"]], catalog, max_units=12)
+        self.assertEqual(errors, [])
+
+    def test_term_at_limit(self) -> None:
+        """Single term with total == max_units returns []."""
+        catalog = sample_catalog()
+        # C949=4 CU + C950=4 CU = 8 CU, limit 8
+        errors = check_term_loads([["C949", "C950"]], catalog, max_units=8)
+        self.assertEqual(errors, [])
+
+    def test_term_over_limit(self) -> None:
+        """Single term with total > max_units returns one problem string."""
+        catalog = sample_catalog()
+        # C949=4 CU + C950=4 CU = 8 CU, limit 7 → exceeds by 1
+        errors = check_term_loads([["C949", "C950"]], catalog, max_units=7)
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], str)
+        self.assertIn("Term 1", errors[0])
+        self.assertIn("8", errors[0])
+
+    def test_unknown_codes_count_as_zero(self) -> None:
+        """Term with only unknown codes returns [] (total=0, not over limit)."""
+        catalog = sample_catalog()
+        # Z999 is unknown → 0 CU; within limit
+        errors = check_term_loads([["Z999"]], catalog, max_units=12)
+        self.assertEqual(errors, [])
+
+    def test_invalid_max_units_raises(self) -> None:
+        """check_term_loads with max_units <= 0 raises ValueError."""
+        catalog = sample_catalog()
+        with self.assertRaises(ValueError):
+            check_term_loads([], catalog, max_units=0)
+        with self.assertRaises(ValueError):
+            check_term_loads([], catalog, max_units=-1)
+
+    def test_multiple_terms_flags_only_overloaded(self) -> None:
+        """Plan with two terms, one over and one under, returns exactly one problem."""
+        catalog = sample_catalog()
+        # Term 1: C949=4 CU (within limit 5)
+        # Term 2: C949=4, D335=3, D197=1 = 8 CU (exceeds limit 5)
+        errors = check_term_loads(
+            [["C949"], ["C949", "D335", "D197"]],
+            catalog,
+            max_units=5,
+        )
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], str)
+        self.assertIn("Term 2", errors[0])
+        self.assertNotIn("Term 1", errors[0])
+        self.assertIn("8", errors[0])
+
+    def test_malformed_codes_count_as_zero(self) -> None:
+        """Term with malformed codes ('bad-code') counts as 0 CU, no problem."""
+        catalog = sample_catalog()
+        # Malformed code counts as 0 CU; within default limit
+        errors = check_term_loads([["bad-code"]], catalog)
+        self.assertEqual(errors, [])
+
+
 if __name__ == "__main__":
     unittest.main()
