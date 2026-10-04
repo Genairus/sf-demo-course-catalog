@@ -6,9 +6,9 @@ small, dependency-free, and well tested. All data in it is synthetic.
 
 ## Layout
 
-- `src/catalog/codes.py`: parsing and normalizing course codes (`C949`, `d335` -> `D335`).
-- `src/catalog/models.py`: the `Course` dataclass.
-- `src/catalog/catalog.py`: `Catalog`, a lookup of courses by code.
+- `catalog/codes.py`: parsing and normalizing course codes (`C949`, `d335` -> `D335`).
+- `catalog/models.py`: the `Course` dataclass.
+- `catalog/catalog.py`: `Catalog`, a lookup of courses by code.
 - `tests/`: `unittest` tests, one module per source module.
 
 ## Conventions
@@ -19,6 +19,9 @@ small, dependency-free, and well tested. All data in it is synthetic.
 - Errors in user-supplied data (unknown codes, malformed codes) are reported, not raised,
   unless the function's docstring says it raises.
 - Every change ships with `unittest` tests in `tests/test_<module>.py`.
+- Everything runs from the repository root with no setup: `catalog` is importable there, so a
+  check like `python3 -c "from catalog.plan import validate_plan"` or
+  `python3 -m unittest tests.test_plan` works as-is.
 
 ## Commands
 
