@@ -14,11 +14,10 @@ class ValidatePlanTests(unittest.TestCase):
     # Happy path – a fully valid plan produces no problems
     # ------------------------------------------------------------------
     def test_valid_plan_has_no_problems(self) -> None:
-        # C949 before C950; D335 and D197 before D287
+        # C949 before C950; D335 and D197 before D287 (matches notes_for_coder)
         terms = [
             ["C949", "D335", "D197"],
-            ["C950", "D333"],
-            ["D287"],
+            ["C950", "D287"],
         ]
         self.assertEqual(validate_plan(terms, self.catalog), [])
 
