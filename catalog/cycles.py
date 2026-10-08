@@ -28,7 +28,11 @@ def find_prerequisite_cycles(catalog: Catalog) -> list[list[str]]:
     cycles: set[tuple[str, ...]] = set()
 
     def normalize_cycle(cycle: list[str]) -> tuple[str, ...]:
-        """Normalize cycle to lexicographically smallest rotation."""
+        """Normalize cycle to lexicographically smallest rotation.
+
+        The cycle is returned with the start element repeated at the end
+        to form a complete cycle path (e.g., ['A', 'B', 'A']).
+        """
         if not cycle:
             return tuple()
         # Find the lexicographically smallest rotation
@@ -38,7 +42,8 @@ def find_prerequisite_cycles(catalog: Catalog) -> list[list[str]]:
                 min_idx = i
         # Rotate to start with smallest element
         rotated = cycle[min_idx:] + cycle[:min_idx]
-        return tuple(rotated)
+        # Repeat the first element at the end to complete the cycle
+        return tuple(rotated + [rotated[0]])
 
     def dfs(code: str, path: list[str]) -> None:
         """DFS traversal to detect cycles.
